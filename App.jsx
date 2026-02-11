@@ -996,16 +996,16 @@ const App = () => {
                     <table className="w-full text-sm text-left">
                       <thead className="text-xs text-slate-500 uppercase bg-purple-50 border-b border-purple-100">
                         <tr>
-                          <th className="px-4 py-3 text-center w-12 whitespace-nowrap">#</th>
-                          <th className="px-6 py-3 whitespace-nowrap">日期</th>
-                          <th className="px-6 py-3 whitespace-nowrap">客戶名稱</th>
-                          <th className="px-6 py-3 whitespace-nowrap">訓練師</th>
-                          <th className="px-6 py-3 whitespace-nowrap">來源</th>
-                          <th className="px-6 py-3 text-right whitespace-nowrap">入金</th>
-                          <th className="px-6 py-3 whitespace-nowrap">品名</th>
-                          <th className="px-6 py-3 text-right whitespace-nowrap">消化</th>
-                          <th className="px-6 py-3 whitespace-nowrap">預約/購課數</th>
-                          <th className="px-6 py-3 text-center whitespace-nowrap">操作</th>
+                          <th className="px-2 py-3 text-center w-12 text-xs">#</th>
+                          <th className="px-2 py-3 text-xs">日期</th>
+                          <th className="px-2 py-3 text-xs">客戶名稱</th>
+                          <th className="px-2 py-3 text-xs">訓練師</th>
+                          <th className="px-2 py-3 text-xs">來源</th>
+                          <th className="px-2 py-3 text-right text-xs">入金</th>
+                          <th className="px-2 py-3 text-xs">品名</th>
+                          <th className="px-2 py-3 text-right text-xs">消化</th>
+                          <th className="px-2 py-3 text-xs">預約/購課數</th>
+                          <th className="px-2 py-3 text-center text-xs">操作</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1015,17 +1015,17 @@ const App = () => {
                              const paymentStyle = entry.paymentMethod ? getPaymentMethodStyle(entry.paymentMethod) : '';
                              return (
                                <tr key={entry.id} className={`border-b border-slate-50 hover:bg-slate-50 ${editingId === entry.id ? 'bg-blue-50' : 'bg-white'}`}>
-                                 <td className="px-4 py-4 text-center text-slate-400 font-mono text-xs whitespace-nowrap">
+                                 <td className="px-2 py-3 text-center text-slate-400 font-mono text-xs">
                                    {filteredCustomers.length - index}
                                  </td>
-                                 <td className="px-6 py-4 font-medium text-slate-500 whitespace-nowrap">{entry.date}</td>
-                                 <td className="px-6 py-4 font-bold text-slate-800 whitespace-nowrap">{entry.name}</td>
-                                 <td className="px-6 py-4 whitespace-nowrap">
+                                 <td className="px-2 py-3 font-medium text-slate-500 text-xs">{entry.date}</td>
+                                 <td className="px-2 py-3 font-bold text-slate-800 text-xs">{entry.name}</td>
+                                 <td className="px-2 py-3 text-xs">
                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.source)}`}>
                                      {entry.source}
                                    </span>
                                  </td>
-                                 <td className="px-6 py-4 whitespace-nowrap">
+                                 <td className="px-2 py-3 text-xs">
                                    {entry.paymentMethod && (
                                      <span className={`px-2 py-1 rounded border text-xs font-medium flex items-center w-fit gap-1 ${paymentStyle}`}>
                                        <Wallet size={12}/>
@@ -1033,14 +1033,14 @@ const App = () => {
                                      </span>
                                    )}
                                  </td>
-                                 <td className="px-6 py-4 text-right font-medium text-emerald-600 whitespace-nowrap">
+                                 <td className="px-2 py-3 text-right font-medium text-emerald-600 text-xs">
                                    {entry.deposit > 0 ? `$${entry.deposit.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-6 py-4 text-slate-700 whitespace-nowrap">{entry.product}</td>
-                                 <td className="px-6 py-4 text-right font-medium text-amber-600 whitespace-nowrap">
+                                 <td className="px-2 py-3 text-slate-700 text-xs">{entry.product}</td>
+                                 <td className="px-2 py-3 text-right font-medium text-amber-600 text-xs">
                                    {entry.burn > 0 ? `$${entry.burn.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-6 py-4 whitespace-nowrap">
+                                 <td className="px-2 py-3 text-xs">
                                     <div className="flex flex-wrap gap-1">
                                        {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700 border border-pink-200">新客購課</span>}
                                        {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">新客預約</span>}
@@ -1048,7 +1048,7 @@ const App = () => {
                                        {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">舊客預約</span>}
                                     </div>
                                  </td>
-                                 <td className="px-6 py-4 text-center flex items-center justify-center gap-2 whitespace-nowrap">
+                                 <td className="px-2 py-3 text-center flex items-center justify-center gap-2 text-xs">
                                    <button 
                                      onClick={() => handleEditCustomer(entry)}
                                      className="text-blue-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
@@ -1069,7 +1069,7 @@ const App = () => {
                           })
                         ) : (
                           <tr>
-                            <td colSpan="10" className="px-6 py-12 text-center text-slate-400">
+                            <td colSpan="10" className="px-2 py-12 text-center text-slate-400">
                               <div className="flex flex-col items-center justify-center gap-2">
                                 <ShoppingBag className="w-8 h-8 text-slate-200"/>
                                 <p>尚無客戶記錄，請在上方新增</p>
@@ -1098,26 +1098,26 @@ const App = () => {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-3 whitespace-nowrap">日期</th>
-                    <th className="px-6 py-3 whitespace-nowrap">訓練師</th>
-                    <th className="px-6 py-3 text-right whitespace-nowrap">入金</th>
-                    <th className="px-6 py-3 text-right whitespace-nowrap">消化</th>
-                    <th className="px-6 py-3 text-center whitespace-nowrap">操作</th>
+                    <th className="px-2 py-3 text-xs">日期</th>
+                    <th className="px-2 py-3 text-xs">訓練師</th>
+                    <th className="px-2 py-3 text-right text-xs">入金</th>
+                    <th className="px-2 py-3 text-right text-xs">消化</th>
+                    <th className="px-2 py-3 text-center text-xs">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEntries.length > 0 ? (
                     filteredEntries.map((entry) => (
                       <tr key={entry.id} className="bg-white border-b border-slate-50 hover:bg-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">{entry.date}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-2 py-3 font-medium text-slate-900 text-xs">{entry.date}</td>
+                        <td className="px-2 py-3 text-xs">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.person)}`}>
                             {entry.person}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right text-emerald-600 font-medium whitespace-nowrap">{entry.income.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-amber-600 font-medium whitespace-nowrap">{entry.consumption.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <td className="px-2 py-3 text-right text-emerald-600 font-medium text-xs">{entry.income.toLocaleString()}</td>
+                        <td className="px-2 py-3 text-right text-amber-600 font-medium text-xs">{entry.consumption.toLocaleString()}</td>
+                        <td className="px-2 py-3 text-center text-xs">
                           <button onClick={() => handleDelete(entry.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
                             <Trash2 size={16} />
                           </button>
@@ -1126,7 +1126,7 @@ const App = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-slate-400">尚無符合的資料，請新增</td>
+                      <td colSpan="5" className="px-2 py-8 text-center text-slate-400">尚無符合的資料，請新增</td>
                     </tr>
                   )}
                 </tbody>
