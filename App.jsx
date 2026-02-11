@@ -27,28 +27,24 @@ const App = () => {
   // --- 1. 每日營收資料 (含防彈存檔機制 _v2) ---
   const [entries, setEntries] = useState(() => {
     try {
-      // 改用新的 Key "_v2" 避免舊資料干擾
       const saved = localStorage.getItem('gym_crm_entries_v2');
       if (saved) {
         let parsedData = JSON.parse(saved);
-        // 確保讀出來的資料結構正確 (修正舊資料的人名顯示)
         return parsedData.map(item => {
           if (!item.person) return { ...item, person: '查' };
           if (item.person === '夥伴 A') return { ...item, person: '查' };
           if (item.person === '夥伴 B') return { ...item, person: '歐' };
-          if (item.person === '姜佩均') return { ...item, person: '安' }; // 自動遷移舊資料
+          if (item.person === '姜佩均') return { ...item, person: '安' };
           return item;
         });
       }
     } catch (error) {
       console.error("讀取營收資料失敗:", error);
     }
-    // 如果讀取失敗或沒資料，回傳預設值
     return defaultData;
   });
 
   const [viewMode, setViewMode] = useState('all');
-  // 保留 State 以防未來擴充或邏輯相依
   const [inputDate, setInputDate] = useState(new Date().toISOString().split('T')[0]);
   const [inputIncome, setInputIncome] = useState('');
   const [inputConsumption, setInputConsumption] = useState('');
@@ -60,7 +56,6 @@ const App = () => {
       const saved = localStorage.getItem('gym_crm_customers_v2');
       if (saved) {
         let parsedData = JSON.parse(saved);
-        // 同樣對客戶資料做人名遷移
         return parsedData.map(item => {
           if (item.source === '姜佩均') return { ...item, source: '安' };
           return item;
@@ -130,7 +125,6 @@ const App = () => {
     setIsOldMemberRenew(entry.isOldMemberRenew || false);
     setIsOldMemberReserve(entry.isOldMemberReserve || false);
 
-    // 滾動到表單位置
     window.scrollTo({ top: 400, behavior: 'smooth' });
   };
 
@@ -149,7 +143,7 @@ const App = () => {
     setClientDate(new Date().toISOString().split('T')[0]);
   };
 
-  // 客戶紀錄處理函數 (新增或更新)
+  // 客戶紀錄處理函數
   const handleAddCustomer = (e) => {
     e.preventDefault();
     if (!clientName) return; 
@@ -159,7 +153,6 @@ const App = () => {
     const targetPerson = clientSource;
 
     if (editingId) {
-      // --- 更新邏輯 ---
       const oldEntry = customerEntries.find(e => e.id === editingId);
       if (!oldEntry) return;
 
@@ -180,11 +173,8 @@ const App = () => {
 
       setCustomerEntries(prev => prev.map(item => item.id === editingId ? updatedEntry : item));
 
-      // 自動修正上方的「每日營收總表」
       setEntries(prevEntries => {
         let nextDailyEntries = [...prevEntries];
-
-        // A. 從舊日期/舊訓練師的紀錄中扣除舊金額
         const oldDailyIndex = nextDailyEntries.findIndex(d => d.date === oldEntry.date && d.person === oldEntry.source);
         if (oldDailyIndex >= 0) {
           const oldDaily = nextDailyEntries[oldDailyIndex];
@@ -194,8 +184,6 @@ const App = () => {
             consumption: Math.max(0, oldDaily.consumption - (oldEntry.burn || 0))
           };
         }
-
-        // B. 將新金額加到新日期/新訓練師的紀錄中
         const newDailyIndex = nextDailyEntries.findIndex(d => d.date === clientDate && d.person === targetPerson);
         if (newDailyIndex >= 0) {
            nextDailyEntries[newDailyIndex] = {
@@ -204,7 +192,6 @@ const App = () => {
              consumption: nextDailyEntries[newDailyIndex].consumption + burnAmount
            };
         } else {
-           // 如果新日期沒有紀錄，則新增一筆
            nextDailyEntries.push({
              id: Date.now(),
              date: clientDate,
@@ -213,15 +200,10 @@ const App = () => {
              consumption: burnAmount
            });
         }
-
         return nextDailyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
       });
-
-      // 結束編輯模式
       handleCancelEdit();
-
     } else {
-      // --- 新增邏輯 (既有) ---
       const newCustomerEntry = {
         id: Date.now(),
         date: clientDate,
@@ -267,7 +249,6 @@ const App = () => {
         return nextDailyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
       });
 
-      // 重置表單
       setClientName('');
       setClientDeposit('');
       setClientProduct('');
@@ -280,7 +261,6 @@ const App = () => {
     }
   };
 
-  // --- CSV 批量匯入功能 ---
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -290,7 +270,6 @@ const App = () => {
       const text = e.target.result;
       const lines = text.split(/\r?\n/);
       
-      // 簡單的 CSV 解析器
       const parseCSVLine = (line) => {
         const result = [];
         let current = '';
@@ -370,7 +349,6 @@ const App = () => {
         
         setEntries(prev => {
             let nextEntries = [...prev];
-            
             Object.values(dailyUpdates).forEach(update => {
                 const idx = nextEntries.findIndex(e => e.date === update.date && e.person === update.person);
                 if (idx >= 0) {
@@ -389,10 +367,8 @@ const App = () => {
                     });
                 }
             });
-            
             return nextEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
         });
-
         alert(`成功匯入 ${newEntries.length} 筆資料！`);
       }
     };
@@ -400,20 +376,13 @@ const App = () => {
     event.target.value = '';
   };
 
-  // --- [功能] CSV 匯出備份功能 ---
   const handleExportCSV = () => {
-    // 建立 CSV 標頭
-    let csvContent = "\uFEFF"; // 加入 BOM
+    let csvContent = "\uFEFF"; 
     csvContent += "日期,客戶,訂單來源,入金方式,品名,金額,消化方式,新客購課,新客預約,舊客續課,舊客預約\n";
 
     customerEntries.forEach(e => {
-      // 日期格式轉換
       const dateStr = e.date.replace(/-/g, '');
-      
-      // 金額判定
       const price = Math.max(e.deposit, e.burn);
-
-      // 消化方式判定
       const burnMethod = e.burn > 0 ? '使用扣點' : '購課';
 
       const row = [
@@ -432,7 +401,6 @@ const App = () => {
       csvContent += row.join(",") + "\n";
     });
 
-    // 觸發下載
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -447,7 +415,6 @@ const App = () => {
     setCustomerEntries(customerEntries.filter(entry => entry.id !== id));
   };
 
-  // 篩選客戶資料
   const filteredCustomers = useMemo(() => {
     if (!clientSearch) return customerEntries;
     const lowerSearch = clientSearch.toLowerCase();
@@ -459,11 +426,9 @@ const App = () => {
     );
   }, [customerEntries, clientSearch]);
 
-  // --- 1. 人次與購課統計 ---
   const visitStats = useMemo(() => {
     let newCount = 0; 
     let oldCount = 0; 
-    
     let newMemberBuy = 0;     
     let newMemberReserve = 0; 
     let oldMemberRenew = 0;   
@@ -495,7 +460,6 @@ const App = () => {
     };
   }, [filteredCustomers]);
 
-  // --- 2. 付款方式統計 ---
   const paymentStats = useMemo(() => {
     const stats = {
       '點數': 0,
@@ -517,8 +481,6 @@ const App = () => {
     return stats;
   }, [filteredCustomers]);
 
-
-  // --- 核心邏輯：篩選與線性迴歸 ---
   const filteredEntries = useMemo(() => {
     if (viewMode === 'all') return entries;
     return entries.filter(entry => entry.person === viewMode);
@@ -539,23 +501,25 @@ const App = () => {
     });
   }, [filteredEntries]);
 
-  const calculateRegression = (dataPoints) => {
-    if (dataPoints.length < 2) return null;
-    const n = dataPoints.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    dataPoints.forEach(p => {
-      sumX += p.x;
-      sumY += p.y;
-      sumXY += p.x * p.y;
-      sumXX += p.x * p.x;
-    });
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    return { slope, intercept };
-  };
-
   const projectionData = useMemo(() => {
     if (filteredEntries.length === 0) return { fullMonthData: [], incomeReg: null, consumReg: null, daysInMonth: 30 };
+    
+    // Regression Calculation
+    const calculateRegression = (dataPoints) => {
+      if (dataPoints.length < 2) return null;
+      const n = dataPoints.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      dataPoints.forEach(p => {
+        sumX += p.x;
+        sumY += p.y;
+        sumXY += p.x * p.y;
+        sumXX += p.x * p.x;
+      });
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+      return { slope, intercept };
+    };
+
     const currentMonth = new Date(filteredEntries[filteredEntries.length - 1].date);
     const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
     const incomePoints = cumulativeData.map(d => ({ x: d.dayOfMonth, y: d.accIncome }));
@@ -607,7 +571,7 @@ const App = () => {
     switch (personName) {
       case '查': return 'bg-blue-50 text-blue-700';
       case '歐': return 'bg-purple-50 text-purple-700';
-      case '安': return 'bg-orange-50 text-orange-700'; // 姜佩均 -> 安
+      case '安': return 'bg-orange-50 text-orange-700';
       default: return 'bg-slate-100 text-slate-600';
     }
   };
@@ -625,7 +589,6 @@ const App = () => {
     }
   };
 
-  // --- [安全修正] 提取格式化邏輯，避免 JSX 中的除法符號被誤判為 Regex ---
   const formatYAxis = (value) => {
     return (value / 10000).toFixed(1) + '萬';
   };
@@ -687,7 +650,6 @@ const App = () => {
                   <ComposedChart data={projectionData.fullMonthData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="dateLabel" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} interval={2} />
-                    {/* [安全修正] 使用外部函數 formatYAxis */}
                     <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
                     <Tooltip content={<CustomTooltip />} />
                     <Line type="monotone" dataKey="predIncome" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={false} name="預測入金" />
@@ -711,7 +673,7 @@ const App = () => {
                 </div>
                 
                 <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                  {/* [新增] 下載備份按鈕 */}
+                  {/* 下載備份按鈕 */}
                   <button 
                     onClick={handleExportCSV}
                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
@@ -859,7 +821,7 @@ const App = () => {
                       </div>
                     </div>
 
-                    {/* 新增：勾選項目 (顏色對應統計面板) */}
+                    {/* 新增：勾選項目 */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isNewMemberBuy ? 'bg-pink-50 border-pink-200 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
@@ -947,7 +909,7 @@ const App = () => {
                        </div>
                     </div>
 
-                    {/* 新增：購課與預約詳情統計 */}
+                    {/* 購課與預約詳情統計 */}
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                          <div className="p-3 rounded-xl border border-pink-100 bg-pink-50 flex flex-col items-center justify-center text-center">
                             <div className="text-xs text-pink-600 mb-1 font-medium flex items-center gap-1"><CreditCard size={12}/> 新客購課</div>
@@ -975,7 +937,6 @@ const App = () => {
                        <h4 className="text-sm font-bold text-slate-700">來源</h4>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                      {/* [安全修正] 提取複雜的 replace 邏輯到 JSX 外部 */}
                       {Object.entries(paymentStats).map(([method, amount]) => {
                           const baseStyle = getPaymentMethodStyle(method);
                           const cardStyle = baseStyle.replace('text-', 'border-').replace('bg-', 'bg-opacity-20 ');
@@ -994,38 +955,37 @@ const App = () => {
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                  <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-slate-500 uppercase bg-purple-50 border-b border-purple-100">
+                      <thead className="text-sm text-slate-500 uppercase bg-purple-50 border-b border-purple-100">
                         <tr>
-                          <th className="px-2 py-3 text-center w-12 text-xs">#</th>
-                          <th className="px-2 py-3 text-xs">日期</th>
-                          <th className="px-2 py-3 text-xs">客戶名稱</th>
-                          <th className="px-2 py-3 text-xs">訓練師</th>
-                          <th className="px-2 py-3 text-xs">來源</th>
-                          <th className="px-2 py-3 text-right text-xs">入金</th>
-                          <th className="px-2 py-3 text-xs">品名</th>
-                          <th className="px-2 py-3 text-right text-xs">消化</th>
-                          <th className="px-2 py-3 text-xs">預約/購課數</th>
-                          <th className="px-2 py-3 text-center text-xs">操作</th>
+                          <th className="px-2 py-3 text-center w-12 whitespace-nowrap">#</th>
+                          <th className="px-2 py-3 whitespace-nowrap">日期</th>
+                          <th className="px-2 py-3 whitespace-nowrap">客戶名稱</th>
+                          <th className="px-2 py-3 whitespace-nowrap">訓練師</th>
+                          <th className="px-2 py-3 whitespace-nowrap">來源</th>
+                          <th className="px-2 py-3 text-right whitespace-nowrap">入金</th>
+                          <th className="px-2 py-3 whitespace-nowrap">品名</th>
+                          <th className="px-2 py-3 text-right whitespace-nowrap">消化</th>
+                          <th className="px-2 py-3 whitespace-nowrap">預約/購課數</th>
+                          <th className="px-2 py-3 text-center whitespace-nowrap">操作</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredCustomers.length > 0 ? (
                           filteredCustomers.map((entry, index) => {
-                             // [安全修正] 顯式回傳 + 提取變數
                              const paymentStyle = entry.paymentMethod ? getPaymentMethodStyle(entry.paymentMethod) : '';
                              return (
                                <tr key={entry.id} className={`border-b border-slate-50 hover:bg-slate-50 ${editingId === entry.id ? 'bg-blue-50' : 'bg-white'}`}>
-                                 <td className="px-2 py-3 text-center text-slate-400 font-mono text-xs">
+                                 <td className="px-2 py-3 text-center text-slate-400 font-mono text-sm whitespace-nowrap">
                                    {filteredCustomers.length - index}
                                  </td>
-                                 <td className="px-2 py-3 font-medium text-slate-500 text-xs">{entry.date}</td>
-                                 <td className="px-2 py-3 font-bold text-slate-800 text-xs">{entry.name}</td>
-                                 <td className="px-2 py-3 text-xs">
+                                 <td className="px-2 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{entry.date}</td>
+                                 <td className="px-2 py-3 font-bold text-slate-800 text-sm whitespace-nowrap">{entry.name}</td>
+                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.source)}`}>
                                      {entry.source}
                                    </span>
                                  </td>
-                                 <td className="px-2 py-3 text-xs">
+                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
                                    {entry.paymentMethod && (
                                      <span className={`px-2 py-1 rounded border text-xs font-medium flex items-center w-fit gap-1 ${paymentStyle}`}>
                                        <Wallet size={12}/>
@@ -1033,22 +993,22 @@ const App = () => {
                                      </span>
                                    )}
                                  </td>
-                                 <td className="px-2 py-3 text-right font-medium text-emerald-600 text-xs">
+                                 <td className="px-2 py-3 text-right font-medium text-emerald-600 text-sm whitespace-nowrap">
                                    {entry.deposit > 0 ? `$${entry.deposit.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-2 py-3 text-slate-700 text-xs">{entry.product}</td>
-                                 <td className="px-2 py-3 text-right font-medium text-amber-600 text-xs">
+                                 <td className="px-2 py-3 text-slate-700 text-sm whitespace-nowrap">{entry.product}</td>
+                                 <td className="px-2 py-3 text-right font-medium text-amber-600 text-sm whitespace-nowrap">
                                    {entry.burn > 0 ? `$${entry.burn.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-2 py-3 text-xs">
-                                    <div className="flex flex-wrap gap-1">
+                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
+                                    <div className="flex gap-1">
                                        {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700 border border-pink-200">新客購課</span>}
                                        {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">新客預約</span>}
                                        {entry.isOldMemberRenew && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">舊客續課</span>}
                                        {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">舊客預約</span>}
                                     </div>
                                  </td>
-                                 <td className="px-2 py-3 text-center flex items-center justify-center gap-2 text-xs">
+                                 <td className="px-2 py-3 text-center flex items-center justify-center gap-2 text-sm whitespace-nowrap">
                                    <button 
                                      onClick={() => handleEditCustomer(entry)}
                                      className="text-blue-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
@@ -1096,28 +1056,28 @@ const App = () => {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                <thead className="text-sm text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-2 py-3 text-xs">日期</th>
-                    <th className="px-2 py-3 text-xs">訓練師</th>
-                    <th className="px-2 py-3 text-right text-xs">入金</th>
-                    <th className="px-2 py-3 text-right text-xs">消化</th>
-                    <th className="px-2 py-3 text-center text-xs">操作</th>
+                    <th className="px-2 py-3 whitespace-nowrap">日期</th>
+                    <th className="px-2 py-3 whitespace-nowrap">訓練師</th>
+                    <th className="px-2 py-3 text-right whitespace-nowrap">入金</th>
+                    <th className="px-2 py-3 text-right whitespace-nowrap">消化</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEntries.length > 0 ? (
                     filteredEntries.map((entry) => (
                       <tr key={entry.id} className="bg-white border-b border-slate-50 hover:bg-slate-50">
-                        <td className="px-2 py-3 font-medium text-slate-900 text-xs">{entry.date}</td>
-                        <td className="px-2 py-3 text-xs">
+                        <td className="px-2 py-3 font-medium text-slate-900 text-sm whitespace-nowrap">{entry.date}</td>
+                        <td className="px-2 py-3 text-sm whitespace-nowrap">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.person)}`}>
                             {entry.person}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-right text-emerald-600 font-medium text-xs">{entry.income.toLocaleString()}</td>
-                        <td className="px-2 py-3 text-right text-amber-600 font-medium text-xs">{entry.consumption.toLocaleString()}</td>
-                        <td className="px-2 py-3 text-center text-xs">
+                        <td className="px-2 py-3 text-right text-emerald-600 font-medium text-sm whitespace-nowrap">{entry.income.toLocaleString()}</td>
+                        <td className="px-2 py-3 text-right text-amber-600 font-medium text-sm whitespace-nowrap">{entry.consumption.toLocaleString()}</td>
+                        <td className="px-2 py-3 text-center text-sm whitespace-nowrap">
                           <button onClick={() => handleDelete(entry.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
                             <Trash2 size={16} />
                           </button>
