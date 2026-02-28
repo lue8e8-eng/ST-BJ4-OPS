@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload, AlertTriangle } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -84,8 +84,10 @@ const App = () => {
   const [isOldMemberRenew, setIsOldMemberRenew] = useState(false);
   const [isOldMemberReserve, setIsOldMemberReserve] = useState(false);
 
-  // 編輯模式狀態
+  // 編輯模式與彈跳視窗狀態
   const [editingId, setEditingId] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // --- 強制自動存檔 Effect (只要資料變更就寫入 _v2) ---
   useEffect(() => {
@@ -137,6 +139,22 @@ const App = () => {
     setIsOldMemberRenew(false);
     setIsOldMemberReserve(false);
     setClientDate(new Date().toISOString().split('T')[0]);
+  };
+
+  // 一鍵清除所有資料
+  const handleConfirmClearAll = () => {
+    setEntries([]);
+    setCustomerEntries([]);
+    setShowClearConfirm(false);
+    showToast('已成功清空所有資料');
+  };
+
+  // 顯示提示訊息
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
   };
 
   // 客戶紀錄處理函數
@@ -370,7 +388,7 @@ const App = () => {
             });
             return nextEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
         });
-        alert(`成功匯入 ${newEntries.length} 筆資料！`);
+        showToast(`成功匯入 ${newEntries.length} 筆資料！`);
       }
     };
     reader.readAsText(file);
@@ -625,7 +643,7 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 font-sans relative">
       <div className="max-w-6xl mx-auto space-y-10">
         
         {/* SECTION 1: 每日營收預測儀表板 */}
@@ -694,7 +712,7 @@ const App = () => {
 
             {/* 客戶消費明細管理 (滿版) */}
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <ShoppingBag className="text-purple-600" />
@@ -703,7 +721,7 @@ const App = () => {
                   <p className="text-slate-500 text-sm mt-1">記錄每一位客人的訂單來源、品項與金額細節</p>
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto items-center">
                   {/* 下載備份按鈕 */}
                   <button 
                     onClick={handleExportCSV}
@@ -714,14 +732,23 @@ const App = () => {
                   </button>
 
                   {/* 匯入 CSV 按鈕 */}
-                  <label className="cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                  <label className="cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors m-0">
                       <Upload size={16} />
                       匯入 CSV
                       <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
                   </label>
 
+                  {/* [新增] 一鍵清空資料按鈕 */}
+                  <button 
+                    onClick={() => setShowClearConfirm(true)}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    清空本月資料
+                  </button>
+
                   {/* 搜尋框 */}
-                  <div className="relative w-full md:w-64">
+                  <div className="relative w-full sm:w-64 mt-2 sm:mt-0">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
@@ -843,7 +870,7 @@ const App = () => {
                            />
                            <button 
                              type="submit"
-                             className={`${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg px-3 py-2 transition-colors flex items-center gap-1`}
+                             className={`${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg px-3 py-2 transition-colors flex items-center gap-1 shrink-0`}
                            >
                              <Save size={16}/>
                              {editingId ? '更新' : ''}
@@ -1125,8 +1152,46 @@ const App = () => {
             </div>
           </div>
         </div>
-        
       </div>
+
+      {/* --- 自訂的確認清空彈跳視窗 --- */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+               <AlertTriangle size={24} />
+               <h3 className="text-xl font-bold">確定要清空本月資料嗎？</h3>
+            </div>
+            <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+              這個操作將會永久刪除<strong>所有的「客戶消費明細」</strong>以及對應的<strong>「每日營收總帳」</strong>。<br/><br/>
+              建議您在清空前，先點擊「下載備份」將資料存回您的電腦。此操作一旦執行將無法復原。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmClearAll}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm shadow-red-200"
+              >
+                確定清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Toast 提示訊息 --- */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50">
+          <CheckSquare size={18} className="text-emerald-400" />
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
+
     </div>
   );
 };
