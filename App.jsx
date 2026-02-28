@@ -104,10 +104,6 @@ const App = () => {
     }
   }, [customerEntries]);
 
-  // 每日營收處理函數
-  const handleDelete = (id) => {
-    setEntries(entries.filter(entry => entry.id !== id));
-  };
 
   // 啟動編輯模式
   const handleEditCustomer = (entry) => {
@@ -183,7 +179,13 @@ const App = () => {
             income: Math.max(0, oldDaily.income - (oldEntry.deposit || 0)),
             consumption: Math.max(0, oldDaily.consumption - (oldEntry.burn || 0))
           };
+          
+          // 如果修改後變成 0，就清理掉
+          if (nextDailyEntries[oldDailyIndex].income === 0 && nextDailyEntries[oldDailyIndex].consumption === 0) {
+              nextDailyEntries.splice(oldDailyIndex, 1);
+          }
         }
+        
         const newDailyIndex = nextDailyEntries.findIndex(d => d.date === clientDate && d.person === targetPerson);
         if (newDailyIndex >= 0) {
            nextDailyEntries[newDailyIndex] = {
@@ -227,9 +229,8 @@ const App = () => {
           entry => entry.date === clientDate && entry.person === targetPerson
         );
 
-        let nextDailyEntries;
+        let nextDailyEntries = [...prevEntries];
         if (existingIndex >= 0) {
-          nextDailyEntries = [...prevEntries];
           const target = nextDailyEntries[existingIndex];
           nextDailyEntries[existingIndex] = {
             ...target,
@@ -244,7 +245,7 @@ const App = () => {
             income: depositAmount,
             consumption: burnAmount
           };
-          nextDailyEntries = [...prevEntries, newDailyEntry];
+          nextDailyEntries.push(newDailyEntry);
         }
         return nextDailyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
       });
@@ -411,9 +412,39 @@ const App = () => {
     document.body.removeChild(link);
   };
 
+  // --- 刪除客戶明細 (含總帳連動) ---
   const handleDeleteCustomer = (id) => {
+    const deletedEntry = customerEntries.find(entry => entry.id === id);
+    if (!deletedEntry) return;
+
     setCustomerEntries(customerEntries.filter(entry => entry.id !== id));
+
+    setEntries(prevEntries => {
+      let nextDailyEntries = [...prevEntries];
+      const dailyIndex = nextDailyEntries.findIndex(d => d.date === deletedEntry.date && d.person === deletedEntry.source);
+
+      if (dailyIndex >= 0) {
+        const daily = nextDailyEntries[dailyIndex];
+        const newIncome = Math.max(0, daily.income - (deletedEntry.deposit || 0));
+        const newConsumption = Math.max(0, daily.consumption - (deletedEntry.burn || 0));
+
+        if (newIncome === 0 && newConsumption === 0) {
+          nextDailyEntries.splice(dailyIndex, 1);
+        } else {
+          nextDailyEntries[dailyIndex] = {
+            ...daily,
+            income: newIncome,
+            consumption: newConsumption
+          };
+        }
+      }
+      return nextDailyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+    });
   };
+
+  const handleDeleteDailyEntry = (id) => {
+    setEntries(entries.filter(entry => entry.id !== id));
+  }
 
   const filteredCustomers = useMemo(() => {
     if (!clientSearch) return customerEntries;
@@ -957,7 +988,7 @@ const App = () => {
                     <table className="w-full text-sm text-left">
                       <thead className="text-sm text-slate-500 uppercase bg-purple-50 border-b border-purple-100">
                         <tr>
-                          <th className="px-2 py-3 text-center w-12 whitespace-nowrap">#</th>
+                          <th className="px-2 py-3 text-center w-8 whitespace-nowrap">#</th>
                           <th className="px-2 py-3 whitespace-nowrap">日期</th>
                           <th className="px-2 py-3 whitespace-nowrap">客戶名稱</th>
                           <th className="px-2 py-3 whitespace-nowrap">訓練師</th>
@@ -965,7 +996,7 @@ const App = () => {
                           <th className="px-2 py-3 text-right whitespace-nowrap">入金</th>
                           <th className="px-2 py-3 whitespace-nowrap">品名</th>
                           <th className="px-2 py-3 text-right whitespace-nowrap">消化</th>
-                          <th className="px-2 py-3 whitespace-nowrap">預約/購課數</th>
+                          <th className="px-2 py-3 whitespace-nowrap">預約/購課</th>
                           <th className="px-2 py-3 text-center whitespace-nowrap">操作</th>
                         </tr>
                       </thead>
@@ -981,13 +1012,13 @@ const App = () => {
                                  <td className="px-2 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{entry.date}</td>
                                  <td className="px-2 py-3 font-bold text-slate-800 text-sm whitespace-nowrap">{entry.name}</td>
                                  <td className="px-2 py-3 text-sm whitespace-nowrap">
-                                   <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.source)}`}>
+                                   <span className={`px-2 py-1 rounded text-sm font-medium ${getPersonBadgeStyle(entry.source)}`}>
                                      {entry.source}
                                    </span>
                                  </td>
                                  <td className="px-2 py-3 text-sm whitespace-nowrap">
                                    {entry.paymentMethod && (
-                                     <span className={`px-2 py-1 rounded border text-xs font-medium flex items-center w-fit gap-1 ${paymentStyle}`}>
+                                     <span className={`px-2 py-1 rounded border text-sm font-medium flex items-center w-fit gap-1 ${paymentStyle}`}>
                                        <Wallet size={12}/>
                                        {entry.paymentMethod}
                                      </span>
@@ -1002,10 +1033,10 @@ const App = () => {
                                  </td>
                                  <td className="px-2 py-3 text-sm whitespace-nowrap">
                                     <div className="flex gap-1">
-                                       {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700 border border-pink-200">新客購課</span>}
-                                       {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">新客預約</span>}
-                                       {entry.isOldMemberRenew && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">舊客續課</span>}
-                                       {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">舊客預約</span>}
+                                       {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-700 border border-pink-200">新購</span>}
+                                       {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">新約</span>}
+                                       {entry.isOldMemberRenew && <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">舊續</span>}
+                                       {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">舊約</span>}
                                     </div>
                                  </td>
                                  <td className="px-2 py-3 text-center flex items-center justify-center gap-2 text-sm whitespace-nowrap">
@@ -1071,14 +1102,14 @@ const App = () => {
                       <tr key={entry.id} className="bg-white border-b border-slate-50 hover:bg-slate-50">
                         <td className="px-2 py-3 font-medium text-slate-900 text-sm whitespace-nowrap">{entry.date}</td>
                         <td className="px-2 py-3 text-sm whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getPersonBadgeStyle(entry.person)}`}>
+                          <span className={`px-2 py-1 rounded text-sm font-medium ${getPersonBadgeStyle(entry.person)}`}>
                             {entry.person}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-right text-emerald-600 font-medium text-sm whitespace-nowrap">{entry.income.toLocaleString()}</td>
                         <td className="px-2 py-3 text-right text-amber-600 font-medium text-sm whitespace-nowrap">{entry.consumption.toLocaleString()}</td>
                         <td className="px-2 py-3 text-center text-sm whitespace-nowrap">
-                          <button onClick={() => handleDelete(entry.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
+                          <button onClick={() => handleDeleteDailyEntry(entry.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
                             <Trash2 size={16} />
                           </button>
                         </td>
