@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload, AlertTriangle } from 'lucide-react';
 import {
   LineChart,
@@ -45,10 +45,14 @@ const App = () => {
   });
 
   const [viewMode, setViewMode] = useState('all');
-  const [inputDate, setInputDate] = useState(new Date().toISOString().split('T')[0]);
-  const [inputIncome, setInputIncome] = useState('');
-  const [inputConsumption, setInputConsumption] = useState('');
-  const [inputPerson, setInputPerson] = useState('查');
+  const [clientDate, setClientDate] = useState(new Date().toISOString().split('T')[0]);
+  const [clientName, setClientName] = useState('');
+  const [clientSource, setClientSource] = useState('查');
+  const [clientPaymentMethod, setClientPaymentMethod] = useState('現金');
+  const [clientDeposit, setClientDeposit] = useState('');
+  const [clientProduct, setClientProduct] = useState('');
+  const [clientBurn, setClientBurn] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
 
   // --- 2. 客戶消費紀錄 (含防彈存檔機制 _v2) ---
   const [customerEntries, setCustomerEntries] = useState(() => {
@@ -68,17 +72,7 @@ const App = () => {
     }
   });
 
-  // 客戶輸入狀態
-  const [clientDate, setClientDate] = useState(new Date().toISOString().split('T')[0]);
-  const [clientName, setClientName] = useState('');
-  const [clientSource, setClientSource] = useState('查');
-  const [clientPaymentMethod, setClientPaymentMethod] = useState('現金');
-  const [clientDeposit, setClientDeposit] = useState('');
-  const [clientProduct, setClientProduct] = useState('');
-  const [clientBurn, setClientBurn] = useState('');
-  const [clientSearch, setClientSearch] = useState('');
-
-  // 新增：四個統計選項的狀態
+  // 購課與預約四個統計選項狀態
   const [isNewMemberBuy, setIsNewMemberBuy] = useState(false);
   const [isNewMemberReserve, setIsNewMemberReserve] = useState(false);
   const [isOldMemberRenew, setIsOldMemberRenew] = useState(false);
@@ -89,12 +83,12 @@ const App = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // --- 強制自動存檔 Effect (只要資料變更就寫入 _v2) ---
+  // --- 強制自動存檔 Effect ---
   useEffect(() => {
     try {
       localStorage.setItem('gym_crm_entries_v2', JSON.stringify(entries));
     } catch (error) {
-      console.error("寫入營收資料失敗 (可能是硬碟滿了或隱私設定阻擋):", error);
+      console.error("寫入營收資料失敗:", error);
     }
   }, [entries]);
 
@@ -105,7 +99,6 @@ const App = () => {
       console.error("寫入客戶資料失敗:", error);
     }
   }, [customerEntries]);
-
 
   // 啟動編輯模式
   const handleEditCustomer = (entry) => {
@@ -198,7 +191,6 @@ const App = () => {
             consumption: Math.max(0, oldDaily.consumption - (oldEntry.burn || 0))
           };
           
-          // 如果修改後變成 0，就清理掉
           if (nextDailyEntries[oldDailyIndex].income === 0 && nextDailyEntries[oldDailyIndex].consumption === 0) {
               nextDailyEntries.splice(oldDailyIndex, 1);
           }
@@ -333,7 +325,7 @@ const App = () => {
         
         const isNewBuy = cols[7]?.toUpperCase().includes('TRUE');
         const isNewReserve = cols[8]?.toUpperCase().includes('TRUE');
-        const isOldRenew = cols[9]?.toUpperCase().includes('TRUE');
+        const isOldModify = cols[9]?.toUpperCase().includes('TRUE');
         const isOldReserve = cols[10]?.toUpperCase().includes('TRUE');
 
         const deposit = paymentMethod !== '點數' ? price : 0;
@@ -350,7 +342,7 @@ const App = () => {
           burn: burn,
           isNewMemberBuy: isNewBuy,
           isNewMemberReserve: isNewReserve,
-          isOldMemberRenew: isOldRenew,
+          isOldMemberRenew: isOldModify,
           isOldMemberReserve: isOldReserve
         };
         newEntries.push(newEntry);
@@ -430,7 +422,6 @@ const App = () => {
     document.body.removeChild(link);
   };
 
-  // --- 刪除客戶明細 (含總帳連動) ---
   const handleDeleteCustomer = (id) => {
     const deletedEntry = customerEntries.find(entry => entry.id === id);
     if (!deletedEntry) return;
@@ -471,7 +462,8 @@ const App = () => {
       entry.name.toLowerCase().includes(lowerSearch) || 
       entry.product.toLowerCase().includes(lowerSearch) ||
       entry.source.toLowerCase().includes(lowerSearch) ||
-      (entry.paymentMethod && entry.paymentMethod.toLowerCase().includes(lowerSearch))
+      (entry.paymentMethod && entry.paymentMethod.toLowerCase().includes(lowerSearch)) ||
+      (entry.date && entry.date.toLowerCase().includes(lowerSearch))
     );
   }, [customerEntries, clientSearch]);
 
@@ -553,7 +545,6 @@ const App = () => {
   const projectionData = useMemo(() => {
     if (filteredEntries.length === 0) return { fullMonthData: [], incomeReg: null, consumReg: null, daysInMonth: 30 };
     
-    // Regression Calculation
     const calculateRegression = (dataPoints) => {
       if (dataPoints.length < 2) return null;
       const n = dataPoints.length;
@@ -643,7 +634,7 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 font-sans relative">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800 tracking-tight">
       <div className="max-w-6xl mx-auto space-y-10">
         
         {/* SECTION 1: 每日營收預測儀表板 */}
@@ -652,8 +643,8 @@ const App = () => {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <Calculator className="text-blue-600" />
-                店面營收與消化預測
+                <Clock className="text-blue-600" />
+                店面營收與消化預測系統
               </h1>
               <p className="text-slate-500 text-sm mt-1">團隊業績追蹤與線性迴歸分析</p>
             </div>
@@ -687,7 +678,7 @@ const App = () => {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h3 className="font-bold text-lg text-slate-700 flex items-center gap-2">{viewMode === 'all' ? '全公司' : viewMode} 累積趨勢與預測</h3>
-                <div className="flex flex-wrap gap-4 text-xs">
+                <div className="flex flex-wrap gap-4 text-xs font-bold">
                   <span className="flex items-center gap-1"><div className="w-3 h-3 bg-emerald-500 rounded-full"></div> 實際入金</span>
                   <span className="flex items-center gap-1"><div className="w-3 h-3 border-2 border-emerald-400 border-dashed rounded-full"></div> 預測入金</span>
                   <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-500 rounded-full"></div> 實際消化</span>
@@ -698,8 +689,8 @@ const App = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={projectionData.fullMonthData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="dateLabel" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} interval={2} />
-                    <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
+                    <XAxis dataKey="dateLabel" tick={{fontSize: 12, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} interval={2} />
+                    <YAxis tick={{fontSize: 12, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
                     <Tooltip content={<CustomTooltip />} />
                     <Line type="monotone" dataKey="predIncome" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={false} name="預測入金" />
                     <Line type="monotone" dataKey="predConsumption" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={false} name="預測消化" />
@@ -722,7 +713,6 @@ const App = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-2 w-full xl:w-auto items-center">
-                  {/* 下載備份按鈕 */}
                   <button 
                     onClick={handleExportCSV}
                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
@@ -731,14 +721,12 @@ const App = () => {
                     下載備份
                   </button>
 
-                  {/* 匯入 CSV 按鈕 */}
                   <label className="cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors m-0">
                       <Upload size={16} />
                       匯入 CSV
                       <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
                   </label>
 
-                  {/* [新增] 一鍵清空資料按鈕 */}
                   <button 
                     onClick={() => setShowClearConfirm(true)}
                     className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
@@ -747,12 +735,11 @@ const App = () => {
                     清空本月資料
                   </button>
 
-                  {/* 搜尋框 */}
                   <div className="relative w-full sm:w-64 mt-2 sm:mt-0">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
-                      placeholder="搜尋客戶、品項、來源..." 
+                      placeholder="搜尋日期、客戶、品項、來源..." 
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm transition-all"
@@ -786,7 +773,7 @@ const App = () => {
                           required
                           value={clientDate}
                           onChange={(e) => setClientDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm font-bold text-center"
                         />
                       </div>
                       <div className="lg:col-span-1">
@@ -797,15 +784,15 @@ const App = () => {
                           placeholder="姓名"
                           value={clientName}
                           onChange={(e) => setClientName(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm text-center font-bold"
                         />
                       </div>
                       <div className="lg:col-span-1">
-                         <label className="block text-xs font-medium text-slate-500 mb-1">訓練師</label>
+                         <label className="block text-xs font-medium text-slate-500 mb-1">教練</label>
                          <select 
                           value={clientSource}
                           onChange={(e) => setClientSource(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm bg-white"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm bg-white text-center font-bold"
                          >
                            <option value="查">查</option>
                            <option value="歐">歐</option>
@@ -817,7 +804,7 @@ const App = () => {
                          <select 
                           value={clientPaymentMethod}
                           onChange={(e) => setClientPaymentMethod(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm bg-white"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm bg-white text-center font-bold"
                          >
                            <option value="點數">點數</option>
                            <option value="現金">現金</option>
@@ -835,7 +822,7 @@ const App = () => {
                           placeholder="0"
                           value={clientDeposit}
                           onChange={(e) => setClientDeposit(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-sm text-center font-bold"
                         />
                       </div>
                       <div className="lg:col-span-1">
@@ -846,7 +833,7 @@ const App = () => {
                           placeholder="購買項目"
                           value={clientProduct}
                           onChange={(e) => setClientProduct(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-purple-500 outline-none text-sm text-center font-bold"
                         />
                         <datalist id="product-options">
                           <option value="使用扣點" />
@@ -854,7 +841,7 @@ const App = () => {
                           <option value="訓練課程-新客初次９折優惠" />
                           <option value="訓練課程-軟QQ方案-５堂" />
                           <option value="訓練課程-軟QQ方案-２５堂" />
-                          <option value="訓練課程-軟QQQ方案" />
+                          <option value="訓練課程-軟QQ方案" />
                           <option value="訓練課程-優惠方案" />
                         </datalist>
                       </div>
@@ -866,11 +853,11 @@ const App = () => {
                              placeholder="0"
                              value={clientBurn}
                              onChange={(e) => setClientBurn(e.target.value)}
-                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-amber-500 outline-none text-sm"
+                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-amber-500 outline-none text-sm text-center font-bold"
                            />
                            <button 
                              type="submit"
-                             className={`${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg px-3 py-2 transition-colors flex items-center gap-1 shrink-0`}
+                             className={`${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg px-3 py-2 transition-colors flex items-center gap-1 shrink-0 font-bold`}
                            >
                              <Save size={16}/>
                              {editingId ? '更新' : ''}
@@ -879,46 +866,46 @@ const App = () => {
                       </div>
                     </div>
 
-                    {/* 新增：勾選項目 */}
+                    {/* 勾選項目 */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isNewMemberBuy ? 'bg-pink-50 border-pink-200 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
                              type="checkbox" 
                              checked={isNewMemberBuy}
-                             onChange={(e) => setIsNewMemberBuy(e.target.checked)}
+                             onChange={(e) => setIsNewMemberBuy(e.checked || e.target.checked)}
                              className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
                            />
-                          <span className={`text-sm font-medium ${isNewMemberBuy ? 'text-pink-700' : 'text-slate-600'}`}>新客購課</span>
+                          <span className={`text-sm font-bold ${isNewMemberBuy ? 'text-pink-700' : 'text-slate-600'}`}>新客購課</span>
                        </label>
 
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isNewMemberReserve ? 'bg-purple-50 border-purple-200 ring-1 ring-purple-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
                              type="checkbox" 
                              checked={isNewMemberReserve}
-                             onChange={(e) => setIsNewMemberReserve(e.target.checked)}
+                             onChange={(e) => setIsNewMemberReserve(e.checked || e.target.checked)}
                              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                            />
-                          <span className={`text-sm font-medium ${isNewMemberReserve ? 'text-purple-700' : 'text-slate-600'}`}>新客預約</span>
+                          <span className={`text-sm font-bold ${isNewMemberReserve ? 'text-purple-700' : 'text-slate-600'}`}>新客預約</span>
                        </label>
 
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isOldMemberRenew ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
                              type="checkbox" 
                              checked={isOldMemberRenew}
-                             onChange={(e) => setIsOldMemberRenew(e.target.checked)}
+                             onChange={(e) => setIsOldMemberRenew(e.checked || e.target.checked)}
                              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                            />
-                          <span className={`text-sm font-medium ${isOldMemberRenew ? 'text-indigo-700' : 'text-slate-600'}`}>舊客續課</span>
+                          <span className={`text-sm font-bold ${isOldMemberRenew ? 'text-indigo-700' : 'text-slate-600'}`}>舊客續課</span>
                        </label>
 
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isOldMemberReserve ? 'bg-cyan-50 border-cyan-200 ring-1 ring-cyan-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
                              type="checkbox" 
                              checked={isOldMemberReserve}
-                             onChange={(e) => setIsOldMemberReserve(e.target.checked)}
+                             onChange={(e) => setIsOldMemberReserve(e.checked || e.target.checked)}
                              className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
                            />
-                          <span className={`text-sm font-medium ${isOldMemberReserve ? 'text-cyan-700' : 'text-slate-600'}`}>舊客預約</span>
+                          <span className={`text-sm font-bold ${isOldMemberReserve ? 'text-cyan-700' : 'text-slate-600'}`}>舊客預約</span>
                        </label>
                     </div>
                  </form>
@@ -936,11 +923,11 @@ const App = () => {
                               <UserCheck size={18}/>
                             </div>
                             <div>
-                              <div className="text-xs text-blue-600 font-medium opacity-80">舊客人次</div>
+                              <div className="text-xs text-blue-600 font-bold opacity-80">舊客人次</div>
                               <div className="text-xs text-slate-400 scale-90 origin-left">使用扣點 / 單次</div>
                             </div>
                           </div>
-                          <div className="text-xl font-bold text-blue-700">{visitStats.oldCount}</div>
+                          <div className="text-xl font-bold text-blue-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.oldCount}</div>
                        </div>
                        
                        <div className="p-4 rounded-xl border border-rose-100 bg-rose-50 flex items-center justify-between">
@@ -949,11 +936,11 @@ const App = () => {
                               <UserPlus size={18}/>
                             </div>
                             <div>
-                              <div className="text-xs text-rose-600 font-medium opacity-80">新客人次</div>
+                              <div className="text-xs text-rose-600 font-bold opacity-80">新客人次</div>
                               <div className="text-xs text-slate-400 scale-90 origin-left">初次體驗 (9折)</div>
                             </div>
                           </div>
-                          <div className="text-xl font-bold text-rose-700">{visitStats.newCount}</div>
+                          <div className="text-xl font-bold text-rose-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.newCount}</div>
                        </div>
 
                        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
@@ -961,29 +948,29 @@ const App = () => {
                             <div className="p-2 bg-white rounded-lg text-slate-600 shadow-sm">
                               <Users size={18}/>
                             </div>
-                            <div className="text-xs text-slate-600 font-medium">來店總人次</div>
+                            <div className="text-xs text-slate-600 font-bold">來店總人次</div>
                           </div>
-                          <div className="text-xl font-bold text-slate-700">{visitStats.total}</div>
+                          <div className="text-xl font-bold text-slate-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.total}</div>
                        </div>
                     </div>
 
                     {/* 購課與預約詳情統計 */}
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                          <div className="p-3 rounded-xl border border-pink-100 bg-pink-50 flex flex-col items-center justify-center text-center">
-                            <div className="text-xs text-pink-600 mb-1 font-medium flex items-center gap-1"><CreditCard size={12}/> 新客購課</div>
-                            <div className="text-lg font-bold text-pink-700">{visitStats.newMemberBuy}</div>
+                            <div className="text-xs text-pink-600 mb-1 font-bold flex items-center gap-1"><CreditCard size={12}/> 新客購課</div>
+                            <div className="text-lg font-bold text-pink-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.newMemberBuy}</div>
                          </div>
                          <div className="p-3 rounded-xl border border-purple-100 bg-purple-50 flex flex-col items-center justify-center text-center">
-                            <div className="text-xs text-purple-600 mb-1 font-medium flex items-center gap-1"><CalendarCheck size={12}/> 新客預約</div>
-                            <div className="text-lg font-bold text-purple-700">{visitStats.newMemberReserve}</div>
+                            <div className="text-xs text-purple-600 mb-1 font-bold flex items-center gap-1"><CalendarCheck size={12}/> 新客預約</div>
+                            <div className="text-lg font-bold text-purple-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.newMemberReserve}</div>
                          </div>
                          <div className="p-3 rounded-xl border border-indigo-100 bg-indigo-50 flex flex-col items-center justify-center text-center">
-                             <div className="text-xs text-indigo-600 mb-1 font-medium flex items-center gap-1"><BookOpen size={12}/> 舊客續課</div>
-                             <div className="text-lg font-bold text-indigo-700">{visitStats.oldMemberRenew}</div>
+                             <div className="text-xs text-indigo-600 mb-1 font-bold flex items-center gap-1"><BookOpen size={12}/> 舊客續課</div>
+                             <div className="text-lg font-bold text-indigo-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.oldMemberRenew}</div>
                          </div>
                          <div className="p-3 rounded-xl border border-cyan-100 bg-cyan-50 flex flex-col items-center justify-center text-center">
-                             <div className="text-xs text-cyan-600 mb-1 font-medium flex items-center gap-1"><CalendarCheck size={12}/> 舊客預約</div>
-                             <div className="text-lg font-bold text-cyan-700">{visitStats.oldMemberReserve}</div>
+                             <div className="text-xs text-cyan-600 mb-1 font-bold flex items-center gap-1"><CalendarCheck size={12}/> 舊客預約</div>
+                             <div className="text-lg font-bold text-cyan-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{visitStats.oldMemberReserve}</div>
                          </div>
                     </div>
                  </div>
@@ -992,7 +979,7 @@ const App = () => {
                  <div className="mt-6 border-t border-slate-100 pt-5">
                     <div className="flex items-center gap-2 mb-3">
                        <PieChart size={16} className="text-slate-400"/>
-                       <h4 className="text-sm font-bold text-slate-700">來源</h4>
+                       <h4 className="text-sm font-bold text-slate-700">來源管道統計</h4>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                       {Object.entries(paymentStats).map(([method, amount]) => {
@@ -1000,8 +987,8 @@ const App = () => {
                           const cardStyle = baseStyle.replace('text-', 'border-').replace('bg-', 'bg-opacity-20 ');
                           return (
                               <div key={method} className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center ${cardStyle}`}>
-                                 <div className="text-xs text-slate-500 mb-1 opacity-80">{method}</div>
-                                 <div className="text-sm font-bold text-slate-700">${amount.toLocaleString()}</div>
+                                 <div className="text-xs text-slate-500 mb-1 font-bold opacity-80">{method}</div>
+                                 <div className="text-sm font-black text-slate-700" style={{ fontVariantNumeric: 'tabular-nums' }}>${amount.toLocaleString()}</div>
                               </div>
                           );
                       })}
@@ -1012,85 +999,87 @@ const App = () => {
               {/* 客戶資料列表 */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-sm text-slate-500 uppercase bg-purple-50 border-b border-purple-100">
+                    <table className="w-full text-sm text-center border-collapse">
+                      <thead className="text-sm text-slate-600 uppercase bg-purple-50 border-b border-purple-100 font-bold">
                         <tr>
-                          <th className="px-2 py-3 text-center w-8 whitespace-nowrap">#</th>
-                          <th className="px-2 py-3 whitespace-nowrap">日期</th>
-                          <th className="px-2 py-3 whitespace-nowrap">客戶名稱</th>
-                          <th className="px-2 py-3 whitespace-nowrap">訓練師</th>
-                          <th className="px-2 py-3 whitespace-nowrap">來源</th>
-                          <th className="px-2 py-3 text-right whitespace-nowrap">入金</th>
-                          <th className="px-2 py-3 whitespace-nowrap">品名</th>
-                          <th className="px-2 py-3 text-right whitespace-nowrap">消化</th>
-                          <th className="px-2 py-3 whitespace-nowrap">預約/購課</th>
-                          <th className="px-2 py-3 text-center whitespace-nowrap">操作</th>
+                          <th className="p-4 w-8 whitespace-nowrap">#</th>
+                          <th className="p-4 whitespace-nowrap">日期</th>
+                          <th className="p-4 whitespace-nowrap">客戶名稱</th>
+                          <th className="p-4 whitespace-nowrap">教練</th>
+                          <th className="p-4 whitespace-nowrap">來源</th>
+                          <th className="p-4 whitespace-nowrap">入金金額</th>
+                          <th className="p-4 whitespace-nowrap">品名</th>
+                          <th className="p-4 whitespace-nowrap">消化金額</th>
+                          <th className="p-4 whitespace-nowrap">預約 / 購課</th>
+                          <th className="p-4 whitespace-nowrap">操作</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-slate-100 font-medium">
                         {filteredCustomers.length > 0 ? (
                           filteredCustomers.map((entry, index) => {
                              const paymentStyle = entry.paymentMethod ? getPaymentMethodStyle(entry.paymentMethod) : '';
                              return (
-                               <tr key={entry.id} className={`border-b border-slate-50 hover:bg-slate-50 ${editingId === entry.id ? 'bg-blue-50' : 'bg-white'}`}>
-                                 <td className="px-2 py-3 text-center text-slate-400 font-mono text-sm whitespace-nowrap">
+                               <tr key={entry.id} className={`hover:bg-slate-50 transition-colors ${editingId === entry.id ? 'bg-blue-50' : 'bg-white'}`}>
+                                 <td className="p-4 text-slate-400 font-bold text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                    {filteredCustomers.length - index}
                                  </td>
-                                 <td className="px-2 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{entry.date}</td>
-                                 <td className="px-2 py-3 font-bold text-slate-800 text-sm whitespace-nowrap">{entry.name}</td>
-                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
-                                   <span className={`px-2 py-1 rounded text-sm font-medium ${getPersonBadgeStyle(entry.source)}`}>
+                                 <td className="p-4 text-slate-500 text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>{entry.date}</td>
+                                 <td className="p-4 font-bold text-slate-800 text-sm whitespace-nowrap">{entry.name}</td>
+                                 <td className="p-4 text-sm whitespace-nowrap">
+                                   <span className={`px-2 py-1 rounded text-sm font-black border ${getPersonBadgeStyle(entry.source)}`}>
                                      {entry.source}
                                    </span>
                                  </td>
-                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
+                                 <td className="p-4 text-sm whitespace-nowrap flex justify-center items-center">
                                    {entry.paymentMethod && (
-                                     <span className={`px-2 py-1 rounded border text-sm font-medium flex items-center w-fit gap-1 ${paymentStyle}`}>
+                                     <span className={`px-2 py-1 rounded border text-sm font-bold flex items-center gap-1 ${paymentStyle}`}>
                                        <Wallet size={12}/>
                                        {entry.paymentMethod}
                                      </span>
                                    )}
                                  </td>
-                                 <td className="px-2 py-3 text-right font-medium text-emerald-600 text-sm whitespace-nowrap">
+                                 <td className="p-4 font-bold text-emerald-600 text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                    {entry.deposit > 0 ? `$${entry.deposit.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-2 py-3 text-slate-700 text-sm whitespace-nowrap">{entry.product}</td>
-                                 <td className="px-2 py-3 text-right font-medium text-amber-600 text-sm whitespace-nowrap">
+                                 <td className="p-4 text-slate-700 text-sm whitespace-nowrap font-bold">{entry.product}</td>
+                                 <td className="p-4 font-bold text-amber-600 text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                    {entry.burn > 0 ? `$${entry.burn.toLocaleString()}` : '-'}
                                  </td>
-                                 <td className="px-2 py-3 text-sm whitespace-nowrap">
-                                    <div className="flex gap-1">
-                                       {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-700 border border-pink-200">新購</span>}
-                                       {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">新約</span>}
-                                       {entry.isOldMemberRenew && <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">舊續</span>}
-                                       {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">舊約</span>}
+                                 <td className="p-4 text-sm whitespace-nowrap">
+                                    <div className="flex justify-center gap-1">
+                                       {entry.isNewMemberBuy && <span className="px-2 py-0.5 rounded text-xs font-bold bg-pink-100 text-pink-700 border border-pink-200">新購</span>}
+                                       {entry.isNewMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">新約</span>}
+                                       {entry.isOldMemberRenew && <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">舊續</span>}
+                                       {entry.isOldMemberReserve && <span className="px-2 py-0.5 rounded text-xs font-bold bg-cyan-100 text-cyan-700 border border-cyan-200">舊約</span>}
                                     </div>
                                  </td>
-                                 <td className="px-2 py-3 text-center flex items-center justify-center gap-2 text-sm whitespace-nowrap">
-                                   <button 
-                                     onClick={() => handleEditCustomer(entry)}
-                                     className="text-blue-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
-                                     title="編輯"
-                                   >
-                                     <Edit size={16} />
-                                   </button>
-                                   <button 
-                                     onClick={() => handleDeleteCustomer(entry.id)}
-                                     className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
-                                     title="刪除"
-                                   >
-                                     <Trash2 size={16} />
-                                   </button>
+                                 <td className="p-4 text-center whitespace-nowrap">
+                                   <div className="flex items-center justify-center gap-2">
+                                     <button 
+                                       onClick={() => handleEditCustomer(entry)}
+                                       className="text-blue-500 hover:text-blue-700 transition-colors p-1 rounded-full hover:bg-blue-50"
+                                       title="編輯"
+                                     >
+                                       <Edit size={16} />
+                                     </button>
+                                     <button 
+                                       onClick={() => handleDeleteCustomer(entry.id)}
+                                       className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
+                                       title="刪除"
+                                     >
+                                       <Trash2 size={16} />
+                                     </button>
+                                   </div>
                                  </td>
                                </tr>
                              );
                           })
                         ) : (
                           <tr>
-                            <td colSpan="10" className="px-2 py-12 text-center text-slate-400">
+                            <td colSpan="10" className="p-12 text-slate-400">
                               <div className="flex flex-col items-center justify-center gap-2">
                                 <ShoppingBag className="w-8 h-8 text-slate-200"/>
-                                <p>尚無客戶記錄，請在上方新增</p>
+                                <p className="italic">尚無客戶記錄，請在上方新增</p>
                               </div>
                             </td>
                           </tr>
@@ -1113,30 +1102,30 @@ const App = () => {
               <h3 className="font-bold text-slate-700">詳細記錄 ({viewMode === 'all' ? '全部' : viewMode}) - 每日總帳</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-sm text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+              <table className="w-full text-center border-collapse">
+                <thead className="text-sm text-slate-600 uppercase bg-slate-50 border-b border-slate-100 font-bold">
                   <tr>
-                    <th className="px-2 py-3 whitespace-nowrap">日期</th>
-                    <th className="px-2 py-3 whitespace-nowrap">訓練師</th>
-                    <th className="px-2 py-3 text-right whitespace-nowrap">入金</th>
-                    <th className="px-2 py-3 text-right whitespace-nowrap">消化</th>
-                    <th className="px-2 py-3 text-center whitespace-nowrap">操作</th>
+                    <th className="p-4 whitespace-nowrap">日期</th>
+                    <th className="p-4 whitespace-nowrap">教練</th>
+                    <th className="p-4 whitespace-nowrap">入金金額</th>
+                    <th className="p-4 whitespace-nowrap">消化金額</th>
+                    <th className="p-4 whitespace-nowrap">操作</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredEntries.length > 0 ? (
                     filteredEntries.map((entry) => (
-                      <tr key={entry.id} className="bg-white border-b border-slate-50 hover:bg-slate-50">
-                        <td className="px-2 py-3 font-medium text-slate-900 text-sm whitespace-nowrap">{entry.date}</td>
-                        <td className="px-2 py-3 text-sm whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded text-sm font-medium ${getPersonBadgeStyle(entry.person)}`}>
+                      <tr key={entry.id} className="bg-white hover:bg-slate-50 transition-colors">
+                        <td className="p-4 text-slate-600 text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>{entry.date}</td>
+                        <td className="p-4 text-sm whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded text-sm font-black border ${getPersonBadgeStyle(entry.person)}`}>
                             {entry.person}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-right text-emerald-600 font-medium text-sm whitespace-nowrap">{entry.income.toLocaleString()}</td>
-                        <td className="px-2 py-3 text-right text-amber-600 font-medium text-sm whitespace-nowrap">{entry.consumption.toLocaleString()}</td>
-                        <td className="px-2 py-3 text-center text-sm whitespace-nowrap">
-                          <button onClick={() => handleDeleteDailyEntry(entry.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
+                        <td className="p-4 text-emerald-600 font-bold text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>${entry.income.toLocaleString()}</td>
+                        <td className="p-4 text-amber-600 font-bold text-sm whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>${entry.consumption.toLocaleString()}</td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <button onClick={() => handleDeleteDailyEntry(entry.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="刪除資料">
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -1144,7 +1133,7 @@ const App = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-2 py-8 text-center text-slate-400">尚無符合的資料，請新增</td>
+                      <td colSpan="5" className="p-8 text-gray-400 italic">尚無符合的資料，請新增</td>
                     </tr>
                   )}
                 </tbody>
@@ -1169,13 +1158,13 @@ const App = () => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
+                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmClearAll}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm shadow-red-200"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-sm shadow-red-200"
               >
                 確定清空
               </button>
@@ -1188,7 +1177,7 @@ const App = () => {
       {toastMessage && (
         <div className="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50">
           <CheckSquare size={18} className="text-emerald-400" />
-          <span className="text-sm font-medium">{toastMessage}</span>
+          <span className="text-sm font-bold">{toastMessage}</span>
         </div>
       )}
 
@@ -1200,15 +1189,15 @@ const App = () => {
 const StatCard = ({ title, value, subValue, color, bgColor = "bg-white", icon, isProjection = false }) => (
   <div className={`${bgColor} p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between h-32 transition-transform hover:-translate-y-1 duration-300`}>
     <div className="flex justify-between items-start">
-      <span className={`text-sm font-semibold ${isProjection ? 'text-slate-600' : 'text-slate-500'}`}>{title}</span>
+      <span className={`text-sm font-bold ${isProjection ? 'text-slate-600' : 'text-slate-500'}`}>{title}</span>
       {icon && <div className={`p-2 rounded-lg bg-slate-100 ${color}`}>{icon}</div>}
     </div>
     <div>
-      <div className={`text-2xl font-bold ${color} tracking-tight`}>
+      <div className={`text-2xl font-black ${color} tracking-tight`} style={{ fontVariantNumeric: 'tabular-nums' }}>
         ${typeof value === 'number' ? value.toLocaleString() : '0'}
       </div>
       {subValue && (
-        <div className="text-xs text-slate-400 mt-1 font-medium">
+        <div className="text-xs text-slate-400 mt-1 font-bold" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {subValue}
         </div>
       )}
@@ -1221,29 +1210,29 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-4 border border-slate-100 shadow-xl rounded-xl text-sm">
-        <p className="font-bold text-slate-700 mb-2">{label}</p>
+      <div className="bg-white p-4 border border-slate-100 shadow-xl rounded-xl text-sm font-bold">
+        <p className="font-black text-slate-700 mb-2">{label}</p>
         {data.actualIncome !== null ? (
           <>
-            <div className="flex items-center gap-2 text-emerald-600 mb-1">
+            <div className="flex items-center gap-2 text-emerald-600 mb-1" style={{ fontVariantNumeric: 'tabular-nums' }}>
               <span className="w-2 h-2 bg-emerald-600 rounded-full"></span>
               <span>實際累積入金: ${data.actualIncome.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-2 text-amber-600">
+            <div className="flex items-center gap-2 text-amber-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
               <span className="w-2 h-2 bg-amber-600 rounded-full"></span>
               <span>實際累積消化: ${data.actualConsumption.toLocaleString()}</span>
             </div>
-             <div className="border-t border-slate-100 my-2 pt-2 text-xs text-slate-400">
+             <div className="border-t border-slate-100 my-2 pt-2 text-xs text-slate-400" style={{ fontVariantNumeric: 'tabular-nums' }}>
               本日: +${data.dailyIncome} / -${data.dailyConsumption}
             </div>
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2 text-emerald-400 mb-1">
+            <div className="flex items-center gap-2 text-emerald-400 mb-1" style={{ fontVariantNumeric: 'tabular-nums' }}>
               <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
               <span>預測累積入金: ${data.predIncome.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-2 text-amber-400">
+            <div className="flex items-center gap-2 text-amber-400" style={{ fontVariantNumeric: 'tabular-nums' }}>
               <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
               <span>預測累積消化: ${data.predConsumption.toLocaleString()}</span>
             </div>
