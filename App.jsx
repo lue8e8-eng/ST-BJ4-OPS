@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload, AlertTriangle, Clock } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -54,25 +54,7 @@ const App = () => {
   const [clientBurn, setClientBurn] = useState('');
   const [clientSearch, setClientSearch] = useState('');
 
-  // --- 2. 客戶消費紀錄 (含防彈存檔機制 _v2) ---
-  const [customerEntries, setCustomerEntries] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gym_crm_customers_v2');
-      if (saved) {
-        let parsedData = JSON.parse(saved);
-        return parsedData.map(item => {
-          if (item.source === '姜佩均') return { ...item, source: '安' };
-          return item;
-        });
-      }
-      return [];
-    } catch (error) {
-      console.error("讀取客戶資料失敗:", error);
-      return [];
-    }
-  });
-
-  // 購課與預約四個統計選項狀態
+  // 統計選項的狀態
   const [isNewMemberBuy, setIsNewMemberBuy] = useState(false);
   const [isNewMemberReserve, setIsNewMemberReserve] = useState(false);
   const [isOldMemberRenew, setIsOldMemberRenew] = useState(false);
@@ -99,6 +81,24 @@ const App = () => {
       console.error("寫入客戶資料失敗:", error);
     }
   }, [customerEntries]);
+
+  // 客戶消費紀錄
+  const [customerEntries, setCustomerEntries] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gym_crm_customers_v2');
+      if (saved) {
+        let parsedData = JSON.parse(saved);
+        return parsedData.map(item => {
+          if (item.source === '姜佩均') return { ...item, source: '安' };
+          return item;
+        });
+      }
+      return [];
+    } catch (error) {
+      console.error("讀取客戶資料失敗:", error);
+      return [];
+    }
+  });
 
   // 啟動編輯模式
   const handleEditCustomer = (entry) => {
@@ -325,7 +325,7 @@ const App = () => {
         
         const isNewBuy = cols[7]?.toUpperCase().includes('TRUE');
         const isNewReserve = cols[8]?.toUpperCase().includes('TRUE');
-        const isOldModify = cols[9]?.toUpperCase().includes('TRUE');
+        const isOldRenew = cols[9]?.toUpperCase().includes('TRUE');
         const isOldReserve = cols[10]?.toUpperCase().includes('TRUE');
 
         const deposit = paymentMethod !== '點數' ? price : 0;
@@ -342,7 +342,7 @@ const App = () => {
           burn: burn,
           isNewMemberBuy: isNewBuy,
           isNewMemberReserve: isNewReserve,
-          isOldMemberRenew: isOldModify,
+          isOldMemberRenew: isOldRenew,
           isOldMemberReserve: isOldReserve
         };
         newEntries.push(newEntry);
@@ -838,7 +838,7 @@ const App = () => {
                         <datalist id="product-options">
                           <option value="使用扣點" />
                           <option value="訓練課程－單次" />
-                          <option value="訓練課程-新客初次９折優惠" />
+                          <option value="訓練課程-新客初次傾折優惠" />
                           <option value="訓練課程-軟QQ方案-５堂" />
                           <option value="訓練課程-軟QQ方案-２５堂" />
                           <option value="訓練課程-軟QQ方案" />
@@ -866,13 +866,13 @@ const App = () => {
                       </div>
                     </div>
 
-                    {/* 勾選項目 */}
+                    {/* 勾選項目 (語法修復處) */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isNewMemberBuy ? 'bg-pink-50 border-pink-200 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
                              type="checkbox" 
                              checked={isNewMemberBuy}
-                             onChange={(e) => setIsNewMemberBuy(e.checked || e.target.checked)}
+                             onChange={(e) => setIsNewMemberBuy(e.target.checked)}
                              className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
                            />
                           <span className={`text-sm font-bold ${isNewMemberBuy ? 'text-pink-700' : 'text-slate-600'}`}>新客購課</span>
@@ -882,7 +882,7 @@ const App = () => {
                           <input 
                              type="checkbox" 
                              checked={isNewMemberReserve}
-                             onChange={(e) => setIsNewMemberReserve(e.checked || e.target.checked)}
+                             onChange={(e) => setIsNewMemberReserve(e.target.checked)}
                              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                            />
                           <span className={`text-sm font-bold ${isNewMemberReserve ? 'text-purple-700' : 'text-slate-600'}`}>新客預約</span>
@@ -892,7 +892,7 @@ const App = () => {
                           <input 
                              type="checkbox" 
                              checked={isOldMemberRenew}
-                             onChange={(e) => setIsOldMemberRenew(e.checked || e.target.checked)}
+                             onChange={(e) => setIsOldMemberRenew(e.target.checked)}
                              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                            />
                           <span className={`text-sm font-bold ${isOldMemberRenew ? 'text-indigo-700' : 'text-slate-600'}`}>舊客續課</span>
@@ -902,7 +902,7 @@ const App = () => {
                           <input 
                              type="checkbox" 
                              checked={isOldMemberReserve}
-                             onChange={(e) => setIsOldMemberReserve(e.checked || e.target.checked)}
+                             onChange={(e) => setIsOldMemberReserve(e.target.checked)}
                              className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
                            />
                           <span className={`text-sm font-bold ${isOldMemberReserve ? 'text-cyan-700' : 'text-slate-600'}`}>舊客預約</span>
@@ -1164,7 +1164,7 @@ const App = () => {
               </button>
               <button
                 onClick={handleConfirmClearAll}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-sm shadow-red-200"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm shadow-red-200"
               >
                 確定清空
               </button>
@@ -1177,7 +1177,7 @@ const App = () => {
       {toastMessage && (
         <div className="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50">
           <CheckSquare size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
+          <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
 
