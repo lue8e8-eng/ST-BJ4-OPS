@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, TrendingUp, TrendingDown, Calculator, Calendar, Save, User, Users, Search, ShoppingBag, CreditCard, Wallet, DollarSign, PieChart, UserCheck, UserPlus, CalendarCheck, BookOpen, CheckSquare, Edit, X, Upload, AlertTriangle, Clock } from 'lucide-react';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ComposedChart,
+  Line,
   Area
 } from 'recharts';
 
@@ -65,23 +63,6 @@ const App = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // --- 強制自動存檔 Effect ---
-  useEffect(() => {
-    try {
-      localStorage.setItem('gym_crm_entries_v2', JSON.stringify(entries));
-    } catch (error) {
-      console.error("寫入營收資料失敗:", error);
-    }
-  }, [entries]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('gym_crm_customers_v2', JSON.stringify(customerEntries));
-    } catch (error) {
-      console.error("寫入客戶資料失敗:", error);
-    }
-  }, [customerEntries]);
-
   // 客戶消費紀錄
   const [customerEntries, setCustomerEntries] = useState(() => {
     try {
@@ -99,6 +80,23 @@ const App = () => {
       return [];
     }
   });
+
+  // --- 強制自動存檔 Effect ---
+  useEffect(() => {
+    try {
+      localStorage.setItem('gym_crm_entries_v2', JSON.stringify(entries));
+    } catch (error) {
+      console.error("寫入營收資料失敗:", error);
+    }
+  }, [entries]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('gym_crm_customers_v2', JSON.stringify(customerEntries));
+    } catch (error) {
+      console.error("寫入客戶資料失敗:", error);
+    }
+  }, [customerEntries]);
 
   // 啟動編輯模式
   const handleEditCustomer = (entry) => {
@@ -838,7 +836,7 @@ const App = () => {
                         <datalist id="product-options">
                           <option value="使用扣點" />
                           <option value="訓練課程－單次" />
-                          <option value="訓練課程-新客初次傾折優惠" />
+                          <option value="訓練課程-新客初次９折優惠" />
                           <option value="訓練課程-軟QQ方案-５堂" />
                           <option value="訓練課程-軟QQ方案-２５堂" />
                           <option value="訓練課程-軟QQ方案" />
@@ -866,7 +864,7 @@ const App = () => {
                       </div>
                     </div>
 
-                    {/* 勾選項目 (語法修復處) */}
+                    {/* 勾選項目 */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                        <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${isNewMemberBuy ? 'bg-pink-50 border-pink-200 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
                           <input 
