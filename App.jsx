@@ -839,7 +839,7 @@ const App = () => {
                           <option value="訓練課程-新客初次９折優惠" />
                           <option value="訓練課程-軟QQ方案-５堂" />
                           <option value="訓練課程-軟QQ方案-２５堂" />
-                          <option value="訓練課程-軟QQ方案" />
+                          <option value="訓練課程-軟QQQ方案" />
                           <option value="訓練課程-優惠方案" />
                         </datalist>
                       </div>
