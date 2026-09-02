@@ -656,9 +656,6 @@ const App = () => {
               <button onClick={() => setViewMode('歐')} className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${viewMode === '歐' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 <User size={16} /> 歐
               </button>
-              <button onClick={() => setViewMode('安')} className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${viewMode === '安' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                <User size={16} /> 安
-              </button>
             </div>
           </div>
 
@@ -794,7 +791,6 @@ const App = () => {
                          >
                            <option value="查">查</option>
                            <option value="歐">歐</option>
-                           <option value="安">安</option>
                          </select>
                       </div>
                       <div className="lg:col-span-1">
